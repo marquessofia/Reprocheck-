@@ -1,0 +1,737 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#14284B">
+  <title>ReproCheck — registro de reparos</title>
+  <style>
+    :root {
+      --azul: #14284B;
+      --azul-toque: #1F3A68;
+      --laranja: #F28C1E;
+      --laranja-toque: #D9740A;
+      --fundo: #F5F3EF;
+      --cartao: #FFFFFF;
+      --texto: #1B2433;
+      --secundario: #5B6677;
+      --linha: #D9D5CC;
+      --erro: #B64F4F;
+      --erro-fundo: #FCEBE9;
+      --sombra: 0 8px 24px rgba(20,40,75,.10);
+      --sombra-curta: 0 4px 12px rgba(20,40,75,.10);
+      --raio-cartao: 20px;
+      --raio-botao: 16px;
+      --fonte: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: var(--fundo); color: var(--texto); font-family: var(--fonte); }
+    body { min-height: 100vh; }
+    button, select, input { font: inherit; }
+    button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    button:focus-visible, select:focus-visible, input:focus-visible { outline: 4px solid rgba(242,140,30,.50); outline-offset: 3px; }
+    button:active { transform: translateY(1px) scale(.985); }
+
+    .app { min-height: 100vh; display: flex; flex-direction: column; }
+    .topbar { flex: 0 0 auto; min-height: 80px; padding: 16px clamp(22px, 5vw, 72px) 13px; background: var(--azul); border-bottom: 4px solid var(--laranja); color: #fff; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+    .brand { display: inline-flex; align-items: center; gap: 13px; font-size: clamp(24px, 2.5vw, 32px); font-weight: 850; letter-spacing: -.04em; white-space: nowrap; }
+    .brand-mark { width: 34px; height: 34px; display: grid; place-items: center; border: 2px solid var(--laranja); border-radius: 11px; color: var(--laranja); }
+    .brand-mark svg { width: 23px; height: 23px; }
+    .context { color: rgba(255,255,255,.84); font-size: clamp(15px, 1.5vw, 20px); font-weight: 650; text-align: right; max-width: 72%; line-height: 1.25; }
+
+    .page { width: min(1180px, calc(100% - 48px)); margin: 0 auto; padding: clamp(28px, 5vh, 54px) 0 36px; flex: 1; display: flex; flex-direction: column; }
+    .page.narrow { width: min(820px, calc(100% - 48px)); }
+    .page-title { margin: 0; font-size: clamp(29px, 3vw, 38px); line-height: 1.12; letter-spacing: -.035em; font-weight: 850; }
+    .page-lead { margin: 10px 0 0; color: var(--secundario); font-size: clamp(18px, 1.8vw, 22px); line-height: 1.4; }
+    .title-block { margin-bottom: 28px; }
+    .accepted { display: inline-flex; align-items: center; gap: 9px; margin-top: 13px; padding: 9px 13px; border-radius: 999px; background: #E7F1EB; color: #246443; font-weight: 800; font-size: 17px; }
+    .accepted::before { content: "✓"; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #3B8961; color: white; }
+    .error-message { margin: 16px 0 0; padding: 13px 16px; border-radius: 12px; background: var(--erro-fundo); color: var(--erro); font-weight: 750; font-size: 18px; border-left: 5px solid var(--erro); }
+
+    .menu-layout { width: min(760px, 100%); margin: auto; align-self: center; }
+    .menu-layout .page-title { text-align: center; }
+    .menu-subtitle { text-align: center; margin: 13px 0 34px; color: var(--secundario); font-size: 20px; }
+    .menu-stack { display: grid; gap: 16px; }
+    .menu-small { display: flex; justify-content: center; margin-top: 11px; }
+
+    .nav-button, .primary-button, .secondary-button, .choice-button, .key-button, .list-row, .condition-row { border: 0; transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease, transform 120ms ease, box-shadow 120ms ease; }
+    .nav-button { min-height: 88px; width: 100%; padding: 18px 26px; border-radius: var(--raio-botao); background: var(--azul); color: #fff; font-size: clamp(22px, 2.2vw, 30px); font-weight: 780; display: flex; align-items: center; justify-content: center; gap: 16px; box-shadow: var(--sombra-curta); }
+    .nav-button:hover { background: var(--azul-toque); box-shadow: 0 7px 18px rgba(20,40,75,.16); }
+    .nav-icon { width: 30px; height: 30px; color: var(--laranja); flex: 0 0 auto; }
+    .nav-icon svg { width: 100%; height: 100%; stroke: currentColor; fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+
+    .primary-button { min-height: 82px; padding: 16px 28px; border-radius: var(--raio-botao); background: var(--laranja); color: var(--azul); font-size: clamp(22px, 2.1vw, 30px); font-weight: 850; box-shadow: 0 7px 16px rgba(217,116,10,.22); }
+    .primary-button:hover { background: #F59B35; box-shadow: 0 9px 20px rgba(217,116,10,.27); }
+    .primary-button.full { width: 100%; }
+    .secondary-button { min-height: 58px; padding: 12px 20px; border: 2px solid var(--azul); border-radius: 12px; background: var(--cartao); color: var(--azul); font-size: 19px; font-weight: 800; }
+    .secondary-button:hover { background: #EEF2F8; }
+    .secondary-button.subtle { border-color: var(--linha); color: var(--secundario); }
+    .button-row { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+    .button-row.center { justify-content: center; }
+    .button-row.between { justify-content: space-between; }
+    .footer-actions { margin-top: 24px; }
+
+    .panel { background: var(--cartao); border: 1px solid var(--linha); border-radius: var(--raio-cartao); padding: clamp(20px, 3vw, 32px); box-shadow: var(--sombra); }
+    .center-panel { width: min(760px, 100%); margin: auto; }
+    .choice-panel { padding: clamp(22px, 3vw, 36px); }
+    .question { margin: 0 0 24px; text-align: center; font-size: clamp(28px, 3vw, 36px); line-height: 1.15; letter-spacing: -.03em; }
+    .panel-heading { margin: 0; font-size: 27px; line-height: 1.2; letter-spacing: -.025em; }
+    .helper { margin: 7px 0 0; color: var(--secundario); font-size: 18px; line-height: 1.4; }
+    .summary { display: inline-flex; flex-wrap: wrap; max-width: 100%; gap: 5px; align-items: center; margin: 0 0 22px; color: var(--secundario); font-size: 18px; font-weight: 750; line-height: 1.45; }
+    .summary strong { color: var(--azul); }
+    .summary .sep { color: var(--laranja); font-size: 21px; }
+
+    .choice-grid { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; min-height: 80px; max-height: min(48vh, 455px); overflow-y: auto; padding: 4px 10px 22px 4px; scrollbar-width: auto; scrollbar-color: var(--azul) #E8E4DC; }
+    .choice-grid::after { content: ""; position: sticky; display: block; height: 28px; bottom: 0; grid-column: 1 / -1; margin: -50px 0 0; pointer-events: none; background: linear-gradient(transparent, rgba(255,255,255,.98)); }
+    .choice-grid::-webkit-scrollbar, .scroll-region::-webkit-scrollbar { width: 18px; }
+    .choice-grid::-webkit-scrollbar-track, .scroll-region::-webkit-scrollbar-track { background: #E8E4DC; border-radius: 20px; }
+    .choice-grid::-webkit-scrollbar-thumb, .scroll-region::-webkit-scrollbar-thumb { background: var(--azul); border-radius: 20px; border: 3px solid #E8E4DC; }
+    .choice-button { min-height: 76px; padding: 13px 16px; border: 2px solid #CCD2DB; border-radius: 14px; background: #fff; color: var(--azul); font-size: clamp(19px, 1.7vw, 23px); line-height: 1.16; font-weight: 800; text-align: left; overflow-wrap: anywhere; box-shadow: 0 2px 0 rgba(20,40,75,.03); }
+    .choice-button:hover { border-color: var(--azul); background: #F6F8FB; }
+    .choice-button:active { background: var(--laranja); border-color: var(--laranja-toque); color: var(--azul); }
+    .choice-button.long { font-size: 19px; }
+    .choice-button .minor { display: block; color: var(--secundario); font-size: 16px; font-weight: 650; margin-top: 4px; }
+
+    .context-strip { margin-bottom: 26px; padding: 13px 17px; border-radius: 13px; background: rgba(20,40,75,.07); color: var(--azul); font-size: 18px; font-weight: 780; line-height: 1.35; border-left: 5px solid var(--laranja); }
+    .record-layout { width: min(860px, 100%); margin: auto; }
+    .record-hero { background: var(--cartao); border: 1px solid var(--linha); border-radius: 24px; padding: clamp(28px, 5vw, 54px); box-shadow: var(--sombra); text-align: center; }
+    .record-hero .primary-button { width: min(620px, 100%); min-height: 150px; font-size: clamp(30px, 4vw, 48px); }
+    .record-icon { width: 60px; height: 60px; margin: 0 auto 15px; color: var(--laranja); }
+    .record-icon svg { width: 100%; height: 100%; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .record-actions { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; margin-top: 24px; }
+
+    .form-stack { display: grid; gap: 18px; }
+    .field-label { display: block; margin-bottom: 8px; color: var(--secundario); font-size: 18px; font-weight: 800; }
+    .select-wrap { position: relative; }
+    .select-wrap::after { content: "⌄"; position: absolute; right: 20px; top: 50%; transform: translateY(-55%); color: var(--azul); pointer-events: none; font-size: 28px; font-weight: 900; }
+    select, .text-input { width: 100%; min-height: 66px; padding: 12px 52px 12px 18px; border: 2px solid var(--linha); border-radius: 13px; color: var(--azul); background: #fff; font-size: 23px; font-weight: 750; appearance: none; }
+    .text-input { padding-right: 18px; appearance: auto; }
+    select:focus, .text-input:focus { border-color: var(--azul); }
+
+    .keypad-wrap { width: min(470px, 100%); margin: 0 auto; }
+    .dots { min-height: 74px; padding: 10px 20px; display: flex; align-items: center; justify-content: center; gap: 15px; border: 2px solid var(--linha); border-radius: 14px; background: #fff; color: var(--laranja); font-size: 39px; letter-spacing: 9px; font-weight: 900; margin-bottom: 16px; }
+    .dots .empty { color: #C9C7C1; letter-spacing: 3px; }
+    .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .key-button { min-height: 74px; border: 2px solid var(--azul); border-radius: 12px; background: #fff; color: var(--azul); font-size: 27px; font-weight: 850; }
+    .key-button:hover { background: #EEF2F8; }
+    .key-button.ok { background: var(--laranja); border-color: var(--laranja); }
+    .key-button.clear { color: var(--secundario); border-color: var(--linha); font-size: 19px; }
+
+    .in-progress { width: min(850px, 100%); margin: auto; }
+    .status-card { padding: clamp(24px, 4vw, 40px); text-align: center; background: var(--cartao); border: 1px solid var(--linha); border-radius: var(--raio-cartao); box-shadow: var(--sombra); }
+    .symptom-line { margin: 14px 0 25px; color: var(--secundario); font-size: 20px; line-height: 1.4; }
+    .symptom-line strong { color: var(--azul); }
+    .timer-label { margin: 0 0 5px; color: var(--secundario); font-weight: 750; font-size: 18px; }
+    .timer { margin: 0 0 23px; color: var(--azul); font-size: clamp(44px, 6vw, 68px); line-height: 1; font-weight: 900; font-variant-numeric: tabular-nums; letter-spacing: .03em; }
+    .timer.paused { color: var(--secundario); }
+    .progress-main { margin-top: 24px; }
+
+    .step-card { width: min(1110px, 100%); margin: auto; }
+    .step-card .choice-grid { max-height: min(47vh, 420px); }
+    .step-card .summary { margin-bottom: 14px; }
+    .step-kicker { color: var(--secundario); font-size: 18px; font-weight: 800; margin: 0 0 11px; }
+    .review-card { width: min(800px, 100%); margin: auto; }
+    .review-route { padding: 18px 20px; border-radius: 14px; background: #F8F8F6; border: 1px solid var(--linha); color: var(--azul); font-size: 23px; font-weight: 800; line-height: 1.42; overflow-wrap: anywhere; }
+    .review-label { margin: 22px 0 8px; color: var(--secundario); font-size: 18px; font-weight: 800; }
+    .time-edit { display: flex; align-items: center; gap: 10px; }
+    .time-edit input { flex: 1; min-height: 66px; padding: 10px 16px; border: 2px solid var(--linha); border-radius: 13px; font-size: 26px; color: var(--azul); font-weight: 800; }
+    .time-unit { color: var(--secundario); font-size: 22px; font-weight: 750; }
+
+    .scroll-region { max-height: min(57vh, 530px); overflow-y: auto; padding: 4px 11px 18px 4px; scrollbar-width: auto; scrollbar-color: var(--azul) #E8E4DC; }
+    .list-stack { display: grid; gap: 13px; }
+    .list-row { width: 100%; min-height: 91px; padding: 15px 18px; display: grid; grid-template-columns: minmax(95px, 125px) 1fr auto; align-items: center; gap: 18px; text-align: left; border: 1px solid var(--linha); border-radius: 15px; background: #fff; color: var(--texto); box-shadow: 0 3px 10px rgba(20,40,75,.05); }
+    .list-row.open-old { border-left: 8px solid var(--laranja); padding-left: 12px; }
+    .list-row:hover { border-color: var(--azul); background: #FBFCFE; }
+    .list-row.clickable { cursor: pointer; }
+    .row-time { color: var(--azul); font-size: 21px; font-weight: 900; white-space: nowrap; }
+    .row-main { min-width: 0; font-size: 19px; line-height: 1.35; overflow-wrap: anywhere; }
+    .row-main strong { display: block; color: var(--texto); font-size: 21px; }
+    .row-meta { display: block; color: var(--secundario); font-size: 16px; margin-top: 3px; }
+    .row-end { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; text-align: right; }
+    .situation { display: inline-flex; align-items: center; min-height: 32px; padding: 4px 11px; border-radius: 999px; font-size: 16px; font-weight: 850; white-space: nowrap; }
+    .situation.open { background: #FFF0D9; color: #9A560A; }
+    .situation.done { background: var(--azul); color: #fff; }
+    .finalize-link { color: var(--azul); font-size: 18px; font-weight: 900; white-space: nowrap; }
+    .empty-state { min-height: 180px; display: grid; place-items: center; border: 2px dashed var(--linha); border-radius: 15px; color: var(--secundario); text-align: center; font-size: 20px; padding: 24px; }
+
+    .leader-options { width: min(760px, 100%); margin: auto; }
+    .leader-options .menu-stack { margin-top: 28px; }
+    .leader-note { margin-top: 22px; color: var(--secundario); text-align: center; font-size: 18px; }
+    .condition-page { width: min(1080px, 100%); margin: auto; }
+    .condition-selectors { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; margin: 20px 0 28px; }
+    .condition-selectors .nav-button { min-height: 98px; font-size: 23px; }
+    .active-title { margin: 0 0 12px; font-size: 26px; }
+    .condition-row { min-height: 87px; padding: 14px 17px; display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 14px; background: #fff; border: 1px solid var(--linha); border-radius: 15px; box-shadow: 0 3px 10px rgba(20,40,75,.05); }
+    .condition-row + .condition-row { margin-top: 11px; }
+    .condition-name { font-size: 19px; font-weight: 800; line-height: 1.28; overflow-wrap: anywhere; }
+    .condition-name small { display: block; margin-top: 4px; color: var(--secundario); font-weight: 650; font-size: 16px; }
+    .condition-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+    .tag-waiting { display: inline-flex; margin-top: 7px; padding: 5px 9px; border-radius: 999px; background: #FFF0D9; color: #9A560A; font-size: 15px; font-weight: 850; }
+    .tiny-button { min-height: 52px; padding: 9px 13px; border: 2px solid var(--azul); border-radius: 10px; color: var(--azul); background: #fff; font-size: 17px; font-weight: 850; }
+    .tiny-button:hover { background: #EEF2F8; }
+
+    .end-day { width: min(690px, 100%); margin: auto; }
+    .day-summary { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; margin: 27px 0; }
+    .summary-stat { min-height: 105px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; background: #fff; border: 1px solid var(--linha); border-radius: 16px; }
+    .summary-stat strong { color: var(--azul); font-size: 38px; line-height: 1; }
+    .summary-stat span { margin-top: 6px; color: var(--secundario); font-size: 17px; font-weight: 750; }
+
+    .modal-backdrop { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 24px; background: rgba(10,20,36,.68); }
+    .modal-card { width: min(570px, 100%); max-height: calc(100vh - 48px); overflow: auto; padding: clamp(22px, 4vw, 35px); border-radius: 21px; background: #fff; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+    .modal-card h2 { margin: 0 0 7px; color: var(--azul); text-align: center; font-size: 30px; }
+    .modal-card .helper { text-align: center; margin-bottom: 18px; }
+    .modal-card .dots { margin-bottom: 14px; }
+    .modal-error { margin: 12px 0; padding: 10px 12px; text-align: center; border-radius: 10px; background: var(--erro-fundo); color: var(--erro); font-size: 17px; font-weight: 800; }
+    .modal-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+    .modal-buttons .primary-button, .modal-buttons .secondary-button { min-height: 62px; font-size: 20px; }
+    .toast { position: fixed; z-index: 40; left: 50%; bottom: 28px; transform: translateX(-50%); display: flex; align-items: center; gap: 13px; width: min(500px, calc(100% - 40px)); padding: 16px 20px; border-radius: 14px; background: var(--azul); color: #fff; box-shadow: 0 12px 30px rgba(0,0,0,.22); font-size: 20px; font-weight: 800; }
+    .toast-icon { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; background: var(--laranja); color: var(--azul); font-size: 22px; font-weight: 950; flex: 0 0 auto; }
+
+    @media (max-width: 850px) {
+      .topbar { align-items: flex-start; flex-direction: column; gap: 7px; }
+      .context { max-width: 100%; text-align: left; }
+      .page { width: min(100% - 30px, 720px); padding-top: 26px; }
+      .choice-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .list-row { grid-template-columns: 1fr auto; }
+      .row-time { grid-column: 1 / -1; }
+      .row-end { grid-column: 2; grid-row: 2; }
+    }
+    @media (max-width: 560px) {
+      .topbar { padding-left: 18px; padding-right: 18px; }
+      .page { width: calc(100% - 24px); padding-bottom: 24px; }
+      .panel, .record-hero, .status-card { padding: 20px 16px; }
+      .choice-grid { grid-template-columns: 1fr; max-height: 52vh; }
+      .condition-selectors, .day-summary { grid-template-columns: 1fr; }
+      .condition-row { grid-template-columns: 1fr; }
+      .condition-actions, .row-end { justify-content: flex-start; }
+      .modal-buttons { grid-template-columns: 1fr; }
+      .button-row.between { justify-content: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app" class="app"></div>
+  <script>
+    /*
+      BLOCO DE DADOS — acrescente peças, detalhes, defeitos, sintomas ou equipamentos aqui.
+      As telas nunca armazenam nomes de catálogo diretamente: todas as listas são desenhadas a partir deste objeto.
+    */
+    const DADOS = {
+      pessoas: [
+        { codigo: '1001', nome: 'Carlos', cargo: 'operador' },
+        { codigo: '1002', nome: 'Davi', cargo: 'operador' },
+        { codigo: '1003', nome: 'Bianca', cargo: 'operador' },
+        { codigo: '1004', nome: 'Rafael', cargo: 'operador' },
+        { codigo: '1005', nome: 'Joana', cargo: 'operador' },
+        { codigo: '1006', nome: 'Leandro', cargo: 'operador' },
+        { codigo: '1007', nome: 'Nádia', cargo: 'operador' },
+        { codigo: '1008', nome: 'Igor', cargo: 'operador' },
+        { codigo: '1009', nome: 'Marina', cargo: 'operador' },
+        { codigo: '1010', nome: 'Otávio', cargo: 'operador' },
+        { codigo: '1011', nome: 'Priscila', cargo: 'operador' },
+        { codigo: '1012', nome: 'Sérgio', cargo: 'operador' },
+        { codigo: '2001', nome: 'Ana', cargo: 'líder' },
+        { codigo: '2002', nome: 'Lívia', cargo: 'líder' },
+        { codigo: '3001', nome: 'Paulo', cargo: 'supervisor' },
+        { codigo: '4001', nome: 'Marta', cargo: 'gerente' }
+      ],
+      linhas: Array.from({ length: 12 }, (_, i) => String(i + 1)),
+      modelos: [
+        { nome: 'Modelo A', ordem: '2041' },
+        { nome: 'Modelo B', ordem: '2042' },
+        { nome: 'Modelo C', ordem: '2043' }
+      ],
+      sintomas: [
+        'Não ligou', 'Não carrega', 'Desliga sozinho', 'Superaquece', 'Barulho anormal', 'Tela apagada',
+        'Travando', 'Botão não funciona', 'Cheiro de queimado', 'Imagem distorcida', 'Conexão instável',
+        'Resposta lenta', 'Vibração excessiva', 'Luz indicadora apagada', 'Ruído intermitente', 'Outro'
+      ],
+      catalogo: [
+        { nome: 'Alto-falante', detalhes: [
+          { nome: 'Módulo acústico', defeitos: ['Sem áudio', 'Áudio distorcido', 'Membrana rasgada', 'Fixação frouxa'] },
+          { nome: 'Grade de proteção', defeitos: ['Amassada', 'Obstruída', 'Solta'] }
+        ]},
+        { nome: 'Antena', detalhes: [
+          { nome: 'Antena principal', defeitos: ['Baixa recepção', 'Rompida', 'Mal posicionada', 'Oxidada'] },
+          { nome: 'Cabo coaxial', defeitos: ['Mal encaixado', 'Rompido', 'Descascado'] }
+        ]},
+        { nome: 'Bateria', detalhes: [
+          { nome: 'Célula', defeitos: ['Inchada', 'Descarregada', 'Tensão irregular', 'Vazamento'] },
+          { nome: 'Conector da bateria', defeitos: ['Torto', 'Oxidado', 'Solto'] }
+        ]},
+        { nome: 'Cabo', detalhes: [
+          { nome: 'Cabo de alimentação', defeitos: ['Mal encaixado', 'Rompido', 'Descascado'] },
+          { nome: 'Cabo da bateria', defeitos: ['Mal encaixado', 'Invertido', 'Rompido'] },
+          { nome: 'Cabo de dados', defeitos: ['Mal encaixado', 'Rompido', 'Descascado'] }
+        ]},
+        { nome: 'Carcaça', detalhes: [
+          { nome: 'Tampa frontal', defeitos: ['Trincada', 'Riscada', 'Mal encaixada'] },
+          { nome: 'Tampa traseira', defeitos: ['Trincada', 'Riscada', 'Mal encaixada'] }
+        ]},
+        { nome: 'Conector', detalhes: [
+          { nome: 'Conector de carga', defeitos: ['Torto', 'Solto', 'Oxidado'] },
+          { nome: 'Conector de dados', defeitos: ['Torto', 'Solto', 'Pino recuado'] }
+        ]},
+        { nome: 'Display', detalhes: [
+          { nome: 'Tela', defeitos: ['Pixel morto', 'Trincada', 'Mancha de luz', 'Sem brilho'] },
+          { nome: 'Cabo flexível', defeitos: ['Mal encaixado', 'Rompido', 'Dobra excessiva'] }
+        ]},
+        { nome: 'Etiqueta', detalhes: [
+          { nome: 'Etiqueta de série', defeitos: ['Ausente', 'Ilegível', 'Descolando'] },
+          { nome: 'Etiqueta de inspeção', defeitos: ['Data incorreta', 'Rasgada', 'Mal posicionada'] }
+        ]},
+        { nome: 'Microfone', detalhes: [
+          { nome: 'Cápsula', defeitos: ['Sem captação', 'Abafada', 'Rompida'] },
+          { nome: 'Tela acústica', defeitos: ['Obstruída', 'Solta', 'Amassada'] }
+        ]},
+        { nome: 'Parafuso', detalhes: [
+          { nome: 'Parafuso da carcaça', defeitos: ['Espanado', 'Faltando', 'Roçado', 'Solto'] },
+          { nome: 'Parafuso da tampa', defeitos: ['Espanado', 'Solto'] },
+          { nome: 'Parafuso do módulo', defeitos: ['Aperto excessivo', 'Cabeça danificada', 'Corrosão', 'Faltando', 'Folga lateral', 'Rosca danificada', 'Roçado', 'Solto', 'Torque baixo', 'Torque alto', 'Comprimento incorreto', 'Arruela ausente', 'Posição incorreta', 'Resíduo na rosca'] }
+        ]},
+        { nome: 'Placa', detalhes: [
+          { nome: 'Placa de controle', defeitos: ['Componente queimado', 'Trilha rompida', 'Solda fria'] },
+          { nome: 'Placa do módulo', defeitos: ['Componente queimado', 'Componente faltando', 'Conector danificado', 'Corrosão', 'Curto elétrico', 'Falha intermitente', 'Oxidação', 'Pino torto', 'Resíduo de fluxo', 'Solda fria', 'Superfície riscada', 'Trilha rompida', 'Umidade', 'Componente de montagem em superfície queimado'] }
+        ]},
+        { nome: 'Suporte', detalhes: [
+          { nome: 'Apoio frontal', defeitos: ['Trincado', 'Riscado', 'Solto'] },
+          { nome: 'Apoio traseiro', defeitos: ['Trincado', 'Riscado', 'Solto'] },
+          { nome: 'Base inferior', defeitos: ['Amassada', 'Empenada', 'Faltando', 'Solta'] },
+          { nome: 'Braço articulado', defeitos: ['Travado', 'Com folga', 'Rompido'] },
+          { nome: 'Chapa de apoio', defeitos: ['Oxidada', 'Trincada', 'Desalinhada'] },
+          { nome: 'Encaixe do suporte', defeitos: ['Frouxo', 'Deslocado', 'Quebrado'] },
+          { nome: 'Fixador lateral', defeitos: ['Solto', 'Espanado', 'Faltando'] },
+          { nome: 'Guia de cabos', defeitos: ['Rompida', 'Desencaixada', 'Obstruída'] },
+          { nome: 'Ponto de ancoragem', defeitos: ['Deformado', 'Trincado', 'Oxidado'] },
+          { nome: 'Presilha', defeitos: ['Quebrada', 'Solta', 'Faltando'] },
+          { nome: 'Trilho interno', defeitos: ['Travado', 'Desalinhado', 'Riscado'] },
+          { nome: 'Placa de suporte', defeitos: ['Empenada', 'Trincada', 'Solta'] },
+          { nome: 'Suporte do módulo', defeitos: ['Rompido', 'Frouxo', 'Faltando'] }
+        ]},
+        { nome: 'Vedação', detalhes: [
+          { nome: 'Anel de vedação', defeitos: ['Cortado', 'Ressecado', 'Ausente'] },
+          { nome: 'Espuma de proteção', defeitos: ['Deslocada', 'Amassada', 'Faltando'] }
+        ]},
+        { nome: 'Ventoinha', detalhes: [
+          { nome: 'Hélice', defeitos: ['Quebrada', 'Desbalanceada', 'Riscada'] },
+          { nome: 'Motor da ventoinha', defeitos: ['Travado', 'Barulhento', 'Superaquecido'] }
+        ]}
+      ],
+      equipamentos: [
+        'Bancada de teste 1', 'Bancada de teste 2', 'Esteira 1', 'Esteira 2', 'Esteira 3', 'Estação de solda 1',
+        'Estação de solda 2', 'Furadeira 1', 'Furadeira 2', 'Parafusadeira 1', 'Parafusadeira 2', 'Parafusadeira 3', 'Torquímetro 1'
+      ],
+      reparosIniciais: [
+        { id: 'r1', minutosAtras: 18, sintoma: 'Não ligou', linha: '2', modelo: 'Modelo A', ordem: '2041', status: 'aberto', tempo: null, operador: null, peca: null, detalhe: null, defeito: null },
+        { id: 'r2', minutosAtras: 37, sintoma: 'Desliga sozinho', linha: '2', modelo: 'Modelo A', ordem: '2041', status: 'aberto', tempo: null, operador: null, peca: null, detalhe: null, defeito: null },
+        { id: 'r3', minutosAtras: 62, sintoma: 'Não carrega', linha: '2', modelo: 'Modelo A', ordem: '2041', status: 'finalizado', tempo: 210, operador: 'Carlos', peca: 'Cabo', detalhe: 'Cabo de alimentação', defeito: 'Mal encaixado' },
+        { id: 'r4', minutosAtras: 136, sintoma: 'Não ligou', linha: '2', modelo: 'Modelo A', ordem: '2041', status: 'finalizado', tempo: 372, operador: 'Carlos', peca: 'Parafuso', detalhe: 'Parafuso do módulo', defeito: 'Roçado' },
+        { id: 'r5', minutosAtras: 211, sintoma: 'Superaquece', linha: '2', modelo: 'Modelo A', ordem: '2041', status: 'finalizado', tempo: 184, operador: 'Davi', peca: 'Ventoinha', detalhe: 'Motor da ventoinha', defeito: 'Barulhento' }
+      ]
+    };
+
+    const ICONE = {
+      play: '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>',
+      history: '<svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/></svg>',
+      open: '<svg viewBox="0 0 24 24"><path d="M4 7.5h6l2 2h8v9H4z"/><path d="M4 7.5V5h6l2 2"/></svg>',
+      leader: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3"/><path d="M5 20c.8-3.3 3.1-5 7-5s6.2 1.7 7 5"/><path d="M19 4v4M17 6h4"/></svg>',
+      repair: '<svg viewBox="0 0 24 24"><path d="m14.5 6.5 3-3 3 3-3 3"/><path d="m4 20 8.8-8.8"/><path d="m13 5 6 6"/><path d="M4 20h4l1.5-1.5"/></svg>',
+      flag: '<svg viewBox="0 0 24 24"><path d="M5 21V4"/><path d="M5 5c5-3 9 3 14 0v9c-5 3-9-3-14 0"/></svg>',
+      line: '<svg viewBox="0 0 24 24"><path d="M4 19V9l4-4 4 4v10"/><path d="M12 19V5l4-2 4 3v13"/><path d="M7 19v-5h2v5M15 19v-4h2v4"/></svg>',
+      close: '<svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5 5 19"/></svg>'
+    };
+
+    const state = {
+      tela: 'menu',
+      diaIniciado: false,
+      sessao: { linha: '2', modelo: 'Modelo A', ordem: '2041', lider: 'Ana' },
+      matricula: { finalidade: 'inicio', valor: '', erro: '', aceita: false },
+      selecao: { sintoma: '', peca: '', detalhe: '', defeito: '' },
+      reparo: { abertoEm: null, cronometro: 0, rodando: false, iniciouEm: null, registroId: null },
+      reparos: DADOS.reparosIniciais.map(item => ({ ...item, abertoEm: Date.now() - item.minutosAtras * 60000 })),
+      condicoes: [
+        { id: 'c1', tipo: 'treinamento', nome: 'Parafusadeira 2', detalhe: 'Operador em treinamento', inicio: '08:10', aguardando: false, ativa: true },
+        { id: 'c2', tipo: 'equipamento', nome: 'Furadeira 1', detalhe: 'Equipamento com defeito', inicio: '09:05', aguardando: true, ativa: true }
+      ],
+      equipamentoEscolhido: '',
+      modal: false,
+      modalErro: '',
+      acaoPendente: null,
+      aviso: '',
+      previewAplicado: false
+    };
+
+    const app = document.getElementById('app');
+    let timerHandle = null;
+    let noticeHandle = null;
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;' }[char]));
+    }
+    function ordenar(items) {
+      return [...items].sort((a, b) => {
+        const av = typeof a === 'string' ? a : a.nome;
+        const bv = typeof b === 'string' ? b : b.nome;
+        if (av === 'Outro') return 1;
+        if (bv === 'Outro') return -1;
+        return av.localeCompare(bv, 'pt-BR');
+      });
+    }
+    function pessoaPorCodigo(codigo) { return DADOS.pessoas.find(p => p.codigo === codigo); }
+    function ehSuperior(pessoa) { return pessoa && ['líder', 'supervisor', 'gerente'].includes(pessoa.cargo); }
+    function agora() { return new Date(); }
+    function hora(data) { return new Date(data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
+    function idade(ms) {
+      const minutos = Math.max(0, Math.floor(ms / 60000));
+      if (minutos < 60) return `aberto há ${minutos || 1} min`;
+      const h = Math.floor(minutos / 60);
+      return `aberto há ${h} h`;
+    }
+    function contexto() {
+      return `Linha ${state.sessao.linha} · ${state.sessao.modelo} · Ordem ${state.sessao.ordem} · Dia iniciado por ${state.sessao.lider}`;
+    }
+    function formatarTempo(segundos) {
+      const total = Math.max(0, Number(segundos) || 0);
+      const min = Math.floor(total / 60).toString().padStart(2, '0');
+      const sec = Math.floor(total % 60).toString().padStart(2, '0');
+      return `${min}:${sec}`;
+    }
+    function minutosDaAbertura(reparo) { return Math.floor((Date.now() - reparo.abertoEm) / 60000); }
+    function iconButton(icon, label, action, extra = '') {
+      return `<button class="nav-button ${extra}" data-action="${action}"><span class="nav-icon">${ICONE[icon] || ''}</span><span>${label}</span></button>`;
+    }
+    function page(title, body, options = {}) {
+      const narrow = options.narrow ? ' narrow' : '';
+      return `<main class="page${narrow}">${body}</main>`;
+    }
+    function header() {
+      const hasContext = state.diaIniciado || ['record', 'symptoms', 'progress', 'parts', 'details', 'defects', 'review', 'equipment', 'open', 'history', 'conditions', 'condition-operators', 'condition-equipment', 'end'].includes(state.tela);
+      const right = hasContext ? contexto() : 'Registro de reparos da linha de montagem';
+      return `<header class="topbar"><div class="brand"><span class="brand-mark"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>ReproCheck</div><div class="context">${escapeHtml(right)}</div></header>`;
+    }
+    function layout(content, options = {}) {
+      app.innerHTML = `<div class="app">${header()}${content}</div>${state.modal ? renderModal() : ''}${state.aviso ? `<div class="toast"><span class="toast-icon">✓</span><span>${escapeHtml(state.aviso)}</span></div>` : ''}`;
+      bindActions();
+    }
+    function titleBlock(title, lead = '', extra = '') {
+      return `<div class="title-block"><h1 class="page-title">${title}</h1>${lead ? `<p class="page-lead">${lead}</p>` : ''}${extra}</div>`;
+    }
+    function backButton() { return `<button class="secondary-button" data-action="back">Voltar</button>`; }
+    function grid(items, action, labeler = item => item, className = '') {
+      const sorted = ordenar(items);
+      return `<div class="choice-grid ${className}">${sorted.map((item, index) => `<button class="choice-button ${String(labeler(item)).length > 35 ? 'long' : ''}" data-choice="${action}" data-index="${index}" data-value="${escapeHtml(typeof item === 'string' ? item : item.nome)}">${escapeHtml(labeler(item))}</button>`).join('')}</div>`;
+    }
+    function screenMenu() {
+      const mainLabel = state.diaIniciado ? 'Voltar aos reparos' : 'Iniciar o dia';
+      return page('', `<div class="menu-layout">${titleBlock('Registro de reparos', 'Controle operacional da linha, com rastreabilidade em cada etapa.') }<div class="menu-stack">${iconButton('play', mainLabel, state.diaIniciado ? 'record' : 'start-auth')}${iconButton('history', 'Consultar histórico', 'history')}${iconButton('open', 'Reparos pendentes', 'open')}</div><div class="menu-small"><button class="secondary-button" data-action="leader-auth">Acesso de liderança</button></div></div>`, { narrow: true });
+    }
+    function screenAuth() {
+      const isLeader = state.matricula.finalidade === 'lider';
+      const title = isLeader ? 'Acesso de liderança' : 'Iniciar o dia';
+      const description = isLeader ? 'Informe uma matrícula autorizada para acompanhar a linha e encerrar o dia.' : 'Informe a matrícula de um líder, supervisor ou cargo superior.';
+      return page(title, `<div class="center-panel panel"><div class="title-block"><h1 class="page-title">${title}</h1><p class="page-lead">${description}</p></div><div class="keypad-wrap"><div class="dots" aria-label="Matrícula digitada">${dots(state.matricula.valor)}</div>${state.matricula.erro ? `<div class="error-message">${escapeHtml(state.matricula.erro)}</div>` : ''}<div class="keypad">${keypad('auth')}</div></div><p class="helper" style="text-align:center;margin-top:20px">Matrículas de demonstração: <strong>2001</strong> para liderança · <strong>1001</strong> para confirmar como operador.</p><div class="button-row center footer-actions">${backButton()}</div></div>`);
+    }
+    function dots(value) { return value ? value.split('').map(() => '<span>•</span>').join('') : '<span class="empty">••••</span>'; }
+    function keypad(type) {
+      const keys = ['1','2','3','4','5','6','7','8','9','Apagar','0','OK'];
+      return keys.map(key => `<button class="key-button ${key === 'OK' ? 'ok' : ''} ${key === 'Apagar' ? 'clear' : ''}" data-key="${key}" data-key-type="${type}">${key}</button>`).join('');
+    }
+    function screenSetup() {
+      const model = DADOS.modelos.find(item => item.nome === state.sessao.modelo) || DADOS.modelos[0];
+      return page('', `<div class="center-panel panel"><div class="accepted">Matrícula aceita</div>${titleBlock('Iniciar dia', 'Escolha o contexto que ficará visível no registro.') }<div class="form-stack"><label><span class="field-label">Linha de montagem</span><span class="select-wrap"><select id="line-select">${DADOS.linhas.map(line => `<option ${line === state.sessao.linha ? 'selected' : ''}>${line}</option>`).join('')}</select></span></label><label><span class="field-label">Modelo da máquina</span><span class="select-wrap"><select id="model-select">${DADOS.modelos.map(item => `<option value="${escapeHtml(item.nome)}" ${item.nome === model.nome ? 'selected' : ''}>${escapeHtml(item.nome)}</option>`).join('')}</select></span></label><label><span class="field-label">Ordem de produção</span><span class="select-wrap"><select id="order-select"><option>${escapeHtml(model.ordem)}</option></select></span></label></div><div class="button-row center footer-actions"><button class="primary-button" data-action="begin-day">Começar</button>${backButton()}</div></div>`);
+    }
+    function screenRecord() {
+      return page('', `<div class="record-layout"><div class="context-strip">${escapeHtml(contexto())}</div><div class="record-hero"><div class="record-icon">${ICONE.repair}</div><button class="primary-button" data-action="open-repair">Registrar reparo</button><div class="record-actions"><button class="secondary-button" data-action="menu">Menu principal</button><button class="secondary-button" data-action="equipment">Sinalizar equipamento</button></div></div></div>`);
+    }
+    function screenSymptoms() {
+      return page('', `<div class="panel choice-panel"><div class="context-strip">${escapeHtml(contexto())}</div><h1 class="question">Qual sintoma foi identificado?</h1>${grid(DADOS.sintomas, 'symptom')}<div class="button-row center footer-actions">${backButton()}</div></div>`);
+    }
+    function screenProgress() {
+      const elapsed = state.reparo.rodando ? state.reparo.cronometro + Math.floor((Date.now() - state.reparo.iniciouEm) / 1000) : state.reparo.cronometro;
+      return page('', `<div class="in-progress"><div class="status-card"><h1 class="page-title">Reparo em andamento</h1><p class="symptom-line">Sintoma identificado: <strong>${escapeHtml(state.selecao.sintoma)}</strong> · Abertura: <strong>${hora(state.reparo.abertoEm)}</strong> (automática)</p><p class="timer-label">Tempo de reparo (opcional)</p><p class="timer ${state.reparo.rodando ? '' : 'paused'}" id="live-timer">${formatarTempo(elapsed)} s</p><button class="secondary-button" data-action="toggle-timer">${state.reparo.rodando ? 'Parar' : 'Iniciar'} / Parar</button><div class="progress-main"><button class="primary-button full" data-action="start-finalize">Concluir reparo</button></div><div class="button-row center footer-actions"><button class="secondary-button" data-action="leave-open">Manter pendente</button>${backButton()}</div></div></div>`);
+    }
+    function chosenPart() { return DADOS.catalogo.find(item => item.nome === state.selecao.peca); }
+    function chosenDetail() { return chosenPart()?.detalhes.find(item => item.nome === state.selecao.detalhe); }
+    function screenParts() {
+      return page('', `<div class="step-card panel choice-panel"><p class="step-kicker">Finalizar reparo · 1 de 3</p><h1 class="question">Qual peça foi reparada?</h1>${grid(DADOS.catalogo, 'part', item => item.nome)}<div class="button-row center footer-actions">${backButton()}</div></div>`);
+    }
+    function screenDetails() {
+      const part = chosenPart();
+      return page('', `<div class="step-card panel choice-panel"><p class="summary"><strong>Peça:</strong><span>${escapeHtml(part?.nome || '')}</span><span class="sep">›</span><span>Escolha o detalhe</span></p><h1 class="question">Qual detalhe?</h1>${grid(part?.detalhes || [], 'detail', item => item.nome)}<div class="button-row center footer-actions">${backButton()}</div></div>`);
+    }
+    function screenDefects() {
+      const detail = chosenDetail();
+      return page('', `<div class="step-card panel choice-panel"><p class="summary"><strong>Caminho:</strong><span>${escapeHtml(state.selecao.peca)}</span><span class="sep">›</span><span>${escapeHtml(state.selecao.detalhe)}</span></p><h1 class="question">Qual o defeito?</h1>${grid(detail?.defeitos || [], 'defect', item => item)}<div class="button-row center footer-actions">${backButton()}</div></div>`);
+    }
+    function screenReview() {
+      const value = state.reparo.cronometro || '';
+      return page('', `<div class="review-card panel"><p class="step-kicker">Finalizar reparo · resumo</p><h1 class="page-title">Registro encontrado</h1><p class="helper">Confira o caminho antes de confirmar.</p><p class="review-label">Peça › detalhe › defeito</p><div class="review-route">${escapeHtml(state.selecao.peca)} <span class="sep">›</span> ${escapeHtml(state.selecao.detalhe)} <span class="sep">›</span> ${escapeHtml(state.selecao.defeito)}</div><p class="review-label">Tempo do reparo (opcional)</p><div class="time-edit"><input id="repair-time" type="number" inputmode="numeric" min="0" value="${value}" aria-label="Tempo do reparo em segundos"><span class="time-unit">segundos</span></div><div class="button-row center footer-actions"><button class="primary-button" data-action="finalize-review">Finalizar</button>${backButton()}</div></div>`);
+    }
+    function screenEquipment() {
+      return page('', `<div class="panel choice-panel"><h1 class="question">Qual equipamento está com defeito?</h1>${grid(DADOS.equipamentos, 'equipment-choice', item => item)}<div class="button-row center footer-actions">${backButton()}</div></div>`);
+    }
+    function recordPath(reparo) {
+      return reparo.peca ? `${reparo.peca} › ${reparo.detalhe} › ${reparo.defeito}` : 'Aguardando finalização';
+    }
+    function screenOpen() {
+      const open = state.reparos.filter(item => item.status === 'aberto').sort((a,b) => b.abertoEm - a.abertoEm);
+      return page('', `<div class="panel"><div class="button-row between"><div><h1 class="page-title">Reparos em aberto</h1><p class="page-lead">Finalize um registro quando a causa estiver identificada.</p></div>${backButton()}</div><div class="scroll-region" style="margin-top:24px">${open.length ? `<div class="list-stack">${open.map(item => `<button class="list-row clickable ${minutosDaAbertura(item) > 120 ? 'open-old' : ''}" data-open-repair="${item.id}"><span class="row-time">${hora(item.abertoEm)}</span><span class="row-main"><strong>${escapeHtml(item.sintoma)}</strong><span class="row-meta">Linha ${escapeHtml(item.linha)} · ${idade(Date.now() - item.abertoEm)}</span></span><span class="row-end"><span class="finalize-link">Finalizar ›</span></span></button>`).join('')}</div>` : '<div class="empty-state">Nenhum reparo em aberto agora.</div>'}</div></div>`);
+    }
+    function screenHistory() {
+      const all = [...state.reparos].sort((a,b) => b.abertoEm - a.abertoEm);
+      return page('', `<div class="panel"><div class="button-row between"><div><h1 class="page-title">Histórico</h1><p class="page-lead">Todos os reparos, do mais recente ao mais antigo.</p></div>${backButton()}</div><div class="scroll-region" style="margin-top:24px">${all.length ? `<div class="list-stack">${all.map(item => `<div class="list-row ${item.status === 'aberto' && minutosDaAbertura(item) > 120 ? 'open-old' : ''}"><span class="row-time">${hora(item.abertoEm)}</span><span class="row-main"><strong>${escapeHtml(item.sintoma)}</strong><span class="row-meta">${escapeHtml(recordPath(item))} · ${item.tempo ? `${item.tempo} s` : 'sem tempo'}${item.operador ? ` · ${escapeHtml(item.operador)}` : ''}</span></span><span class="row-end"><span class="situation ${item.status === 'aberto' ? 'open' : 'done'}">${item.status === 'aberto' ? 'Em aberto' : 'Finalizado'}</span></span></div>`).join('')}</div>` : '<div class="empty-state">Nenhum reparo registrado ainda.</div>'}</div></div>`);
+    }
+    function screenLeaderOptions() {
+      return page('', `<div class="leader-options panel"><div class="accepted">Matrícula autorizada</div>${titleBlock('Acesso de liderança', 'Acompanhe as condições da linha e faça o fechamento operacional.') }<div class="menu-stack">${iconButton('line', 'Condições da linha', 'conditions')}${iconButton('close', 'Encerrar o dia', 'end-day')}</div><p class="leader-note">Acesso restrito a líder, supervisor ou cargo superior.</p><div class="button-row center footer-actions">${backButton()}</div></div>`);
+    }
+    function activeConditionRows() {
+      const active = state.condicoes.filter(item => item.ativa);
+      if (!active.length) return '<div class="empty-state">Nenhuma condição ativa agora.</div>';
+      return active.map(item => `<div class="condition-row"><div class="condition-name">${escapeHtml(item.nome)}<small>${escapeHtml(item.detalhe)} · desde ${escapeHtml(item.inicio)}</small>${item.aguardando ? '<span class="tag-waiting">Aguardando confirmação</span>' : ''}</div><div class="condition-actions">${item.aguardando ? '<button class="tiny-button" data-confirm-condition="' + item.id + '">Confirmar</button>' : ''}<button class="tiny-button" data-end-condition="${item.id}">Terminar</button></div></div>`).join('');
+    }
+    function screenConditions() {
+      return page('', `<div class="condition-page"><div class="button-row between"><div><h1 class="page-title">Condições da linha</h1><p class="page-lead">Marque um estado que precisa ficar visível para a equipe.</p></div>${backButton()}</div><div class="condition-selectors">${iconButton('leader', 'Operador em treinamento', 'condition-operators')}${iconButton('flag', 'Equipamento com defeito', 'condition-equipment')}</div><div class="panel"><h2 class="active-title">Condições ativas</h2><div>${activeConditionRows()}</div></div></div>`);
+    }
+    function screenConditionList(tipo) {
+      const isOperator = tipo === 'operators';
+      const items = isOperator ? DADOS.pessoas.filter(p => p.cargo === 'operador') : DADOS.equipamentos;
+      return page('', `<div class="panel choice-panel"><p class="step-kicker">Condições da linha</p><h1 class="question">${isOperator ? 'Qual operador está em treinamento?' : 'Qual equipamento está com defeito?'}</h1>${grid(items, isOperator ? 'condition-operator' : 'condition-equipment-add', item => isOperator ? `${item.nome} · matrícula ${item.codigo}` : item)}<div class="button-row center footer-actions">${backButton()}</div></div>`);
+    }
+    function screenEnd() {
+      const total = state.reparos.length;
+      const open = state.reparos.filter(item => item.status === 'aberto').length;
+      return page('', `<div class="end-day panel"><div class="button-row between"><div><h1 class="page-title">Encerrar o dia</h1><p class="page-lead">Confira o movimento antes de liberar a linha.</p></div>${backButton()}</div><div class="day-summary"><div class="summary-stat"><strong>${total}</strong><span>Reparos do dia</span></div><div class="summary-stat"><strong>${open}</strong><span>Em aberto</span></div></div><button class="primary-button full" data-action="close-day">Encerrar o dia</button></div>`);
+    }
+    function renderModal() {
+      return `<div class="modal-backdrop" role="dialog" aria-modal="true"><div class="modal-card"><h2>Digite seu código</h2><p class="helper">Confirme a ação no fim do registro.</p><div class="dots">${dots(state.codigoModal || '')}</div>${state.modalErro ? `<div class="modal-error">${escapeHtml(state.modalErro)}</div>` : ''}<div class="keypad">${keypad('modal')}</div><div class="modal-buttons"><button class="primary-button" data-action="confirm-code">Confirmar</button><button class="secondary-button" data-action="cancel-modal">Cancelar</button></div></div></div>`;
+    }
+    function render() {
+      if (state.tela === 'menu') layout(screenMenu());
+      else if (state.tela === 'auth') layout(screenAuth());
+      else if (state.tela === 'setup') layout(screenSetup());
+      else if (state.tela === 'record') layout(screenRecord());
+      else if (state.tela === 'symptoms') layout(screenSymptoms());
+      else if (state.tela === 'progress') layout(screenProgress());
+      else if (state.tela === 'parts') layout(screenParts());
+      else if (state.tela === 'details') layout(screenDetails());
+      else if (state.tela === 'defects') layout(screenDefects());
+      else if (state.tela === 'review') layout(screenReview());
+      else if (state.tela === 'equipment') layout(screenEquipment());
+      else if (state.tela === 'open') layout(screenOpen());
+      else if (state.tela === 'history') layout(screenHistory());
+      else if (state.tela === 'leader-options') layout(screenLeaderOptions());
+      else if (state.tela === 'conditions') layout(screenConditions());
+      else if (state.tela === 'condition-operators') layout(screenConditionList('operators'));
+      else if (state.tela === 'condition-equipment') layout(screenConditionList('equipment'));
+      else if (state.tela === 'end') layout(screenEnd());
+      if (state.tela === 'progress' && state.reparo.rodando) startTimerRefresh();
+      else stopTimerRefresh();
+    }
+    function goBack() {
+      const routes = { auth: 'menu', setup: 'auth', symptoms: 'record', progress: 'symptoms', parts: 'progress', details: 'parts', defects: 'details', review: 'defects', equipment: 'record', open: 'menu', history: 'menu', 'leader-options': 'menu', conditions: 'leader-options', 'condition-operators': 'conditions', 'condition-equipment': 'conditions', end: 'leader-options' };
+      state.tela = state.tela === 'parts' && state.reparo.registroId ? 'open' : (routes[state.tela] || 'menu');
+      if (state.tela === 'auth') { state.matricula.valor = ''; state.matricula.erro = ''; }
+      render();
+    }
+    function openAuth(finalidade) {
+      state.matricula = { finalidade, valor: '', erro: '', aceita: false };
+      state.tela = 'auth';
+      render();
+    }
+    function handleKey(key, type) {
+      if (type === 'auth') {
+        if (key === 'Apagar') state.matricula.valor = state.matricula.valor.slice(0, -1);
+        else if (key !== 'OK' && state.matricula.valor.length < 4) state.matricula.valor += key;
+        else if (key === 'OK') validateAuth();
+        state.matricula.erro = '';
+        render();
+      } else {
+        if (key === 'Apagar') state.codigoModal = (state.codigoModal || '').slice(0, -1);
+        else if (key !== 'OK' && (state.codigoModal || '').length < 4) state.codigoModal = (state.codigoModal || '') + key;
+        else if (key === 'OK') confirmCode();
+        state.modalErro = '';
+        render();
+      }
+    }
+    function validateAuth() {
+      const person = pessoaPorCodigo(state.matricula.valor);
+      if (!ehSuperior(person)) {
+        state.matricula.erro = 'Esta matrícula não pode iniciar o dia';
+        if (state.matricula.finalidade === 'lider') state.matricula.erro = 'Esta matrícula não tem acesso às opções do líder';
+        return;
+      }
+      state.matricula.aceita = true;
+      state.sessao.lider = person.nome;
+      state.tela = state.matricula.finalidade === 'lider' ? 'leader-options' : 'setup';
+      render();
+    }
+    function beginDay() {
+      const line = document.getElementById('line-select')?.value || state.sessao.linha;
+      const model = document.getElementById('model-select')?.value || state.sessao.modelo;
+      const found = DADOS.modelos.find(item => item.nome === model) || DADOS.modelos[0];
+      state.sessao = { linha: line, modelo: found.nome, ordem: found.ordem, lider: state.sessao.lider };
+      state.diaIniciado = true;
+      state.tela = 'record';
+      render();
+    }
+    function startRepair() {
+      state.selecao = { sintoma: '', peca: '', detalhe: '', defeito: '' };
+      state.reparo = { abertoEm: Date.now(), cronometro: 0, rodando: false, iniciouEm: null, registroId: null };
+      state.tela = 'symptoms';
+      render();
+    }
+    function chooseSymptom(value) { state.selecao.sintoma = value; requestConfirmation('start'); }
+    function toggleTimer() {
+      if (state.reparo.rodando) {
+        state.reparo.cronometro += Math.floor((Date.now() - state.reparo.iniciouEm) / 1000);
+        state.reparo.rodando = false;
+        state.reparo.iniciouEm = null;
+      } else {
+        state.reparo.rodando = true;
+        state.reparo.iniciouEm = Date.now();
+      }
+      render();
+    }
+    function elapsedNow() { return state.reparo.cronometro + (state.reparo.rodando && state.reparo.iniciouEm ? Math.floor((Date.now() - state.reparo.iniciouEm) / 1000) : 0); }
+    function stopTimer() { if (state.reparo.rodando) { state.reparo.cronometro = elapsedNow(); state.reparo.rodando = false; state.reparo.iniciouEm = null; } }
+    function startTimerRefresh() {
+      stopTimerRefresh();
+      timerHandle = setInterval(() => { const target = document.getElementById('live-timer'); if (target) target.textContent = `${formatarTempo(elapsedNow())} s`; }, 1000);
+    }
+    function stopTimerRefresh() { if (timerHandle) clearInterval(timerHandle); timerHandle = null; }
+    function beginFinalize() { stopTimer(); state.tela = 'parts'; render(); }
+    function choosePart(value) { state.selecao.peca = value; state.selecao.detalhe = ''; state.selecao.defeito = ''; state.tela = 'details'; render(); }
+    function chooseDetail(value) { state.selecao.detalhe = value; state.selecao.defeito = ''; state.tela = 'defects'; render(); }
+    function chooseDefect(value) { state.selecao.defeito = value; state.tela = 'review'; render(); }
+    function requestConfirmation(type, extras = {}) {
+      state.codigoModal = '';
+      state.modalErro = '';
+      state.acaoPendente = { type, ...extras };
+      state.modal = true;
+      render();
+    }
+    function finalizeReview() {
+      const input = document.getElementById('repair-time');
+      const typed = input ? input.value : '';
+      state.reparo.cronometro = typed === '' ? 0 : Math.max(0, Number(typed));
+      requestConfirmation('finalize', { existingId: state.reparo.registroId });
+    }
+    function createRecord(status, personName) {
+      const id = `r${Date.now()}`;
+      const record = { id, abertoEm: state.reparo.abertoEm || Date.now(), sintoma: state.selecao.sintoma, linha: state.sessao.linha, modelo: state.sessao.modelo, ordem: state.sessao.ordem, status, tempo: state.reparo.cronometro || null, operador: personName, peca: status === 'finalizado' ? state.selecao.peca : null, detalhe: status === 'finalizado' ? state.selecao.detalhe : null, defeito: status === 'finalizado' ? state.selecao.defeito : null };
+      state.reparos.push(record);
+      return record;
+    }
+    function registerEquipment(name, person) {
+      state.condicoes.unshift({ id: `c${Date.now()}`, tipo: 'equipamento', nome: name, detalhe: 'Equipamento com defeito', inicio: hora(Date.now()), aguardando: person.cargo === 'operador', ativa: true });
+    }
+    function confirmCode() {
+      const person = pessoaPorCodigo(state.codigoModal || '');
+      if (!person) { state.modalErro = 'Código não encontrado'; render(); return; }
+      const pending = state.acaoPendente;
+      if (!pending) return;
+      if (pending.type === 'start') {
+        const created = createRecord('aberto', person.nome);
+        state.reparo.registroId = created.id;
+      }
+      if (pending.type === 'keep-open') {
+        state.reparo.registroId = state.reparo.registroId || state.reparos.find(item => item.abertoEm === state.reparo.abertoEm)?.id || null;
+      }
+      if (pending.type === 'finalize') {
+        if (pending.existingId) {
+          const found = state.reparos.find(item => item.id === pending.existingId);
+          if (found) Object.assign(found, { status: 'finalizado', tempo: state.reparo.cronometro || null, operador: person.nome, peca: state.selecao.peca, detalhe: state.selecao.detalhe, defeito: state.selecao.defeito });
+        } else createRecord('finalizado', person.nome);
+      }
+      if (pending.type === 'equipment') registerEquipment(state.equipamentoEscolhido, person);
+      state.modal = false;
+      state.acaoPendente = null;
+      state.aviso = `Registrado por ${person.nome}`;
+      state.tela = pending.type === 'start' ? 'progress' : 'record';
+      render();
+      clearTimeout(noticeHandle);
+      noticeHandle = setTimeout(() => { state.aviso = ''; render(); }, 2000);
+    }
+    function leaveOpen() { stopTimer(); requestConfirmation('keep-open'); }
+    function chooseEquipment(value) { state.equipamentoEscolhido = value; requestConfirmation('equipment'); }
+    function finalizeExisting(id) {
+      const found = state.reparos.find(item => item.id === id);
+      if (!found) return;
+      state.reparo = { abertoEm: found.abertoEm, cronometro: found.tempo || 0, rodando: false, iniciouEm: null, registroId: id };
+      state.selecao = { sintoma: found.sintoma, peca: '', detalhe: '', defeito: '' };
+      state.tela = 'parts';
+      render();
+    }
+    function addCondition(kind, value) {
+      const label = kind === 'operator' ? value.split(' · ')[0] : value;
+      state.condicoes.unshift({ id: `c${Date.now()}`, tipo: kind, nome: label, detalhe: kind === 'operator' ? 'Operador em treinamento' : 'Equipamento com defeito', inicio: hora(Date.now()), aguardando: false, ativa: true });
+      state.tela = 'conditions';
+      render();
+    }
+    function previewSetup() {
+      const p = new URLSearchParams(location.search).get('preview');
+      if (!p || state.previewAplicado) return;
+      state.previewAplicado = true;
+      state.diaIniciado = true;
+      if (p === 'menu') state.diaIniciado = false;
+      if (p === 'menu') state.tela = 'menu';
+      if (p === 'start') { state.diaIniciado = false; state.tela = 'auth'; state.matricula.finalidade = 'inicio'; }
+      if (p === 'record') state.tela = 'record';
+      if (p === 'final') { state.selecao = { sintoma: 'Não ligou', peca: 'Placa', detalhe: 'Placa do módulo', defeito: '' }; state.tela = 'defects'; }
+      if (p === 'confirm') { state.selecao = { sintoma: 'Não ligou', peca: 'Placa', detalhe: 'Placa do módulo', defeito: 'Componente queimado' }; state.reparo.cronometro = 372; state.tela = 'review'; state.codigoModal = ''; state.modalErro = ''; state.acaoPendente = { type: 'finalize' }; state.modal = true; }
+      if (p === 'open') state.tela = 'open';
+      if (p === 'history') state.tela = 'history';
+      if (p === 'conditions') state.tela = 'conditions';
+      if (p === 'end') state.tela = 'end';
+    }
+    function bindActions() {
+      document.querySelectorAll('[data-action]').forEach(button => button.addEventListener('click', () => {
+        const action = button.dataset.action;
+        if (action === 'start-auth') openAuth('inicio');
+        else if (action === 'leader-auth') openAuth('lider');
+        else if (action === 'menu') { state.tela = 'menu'; render(); }
+        else if (action === 'history') { state.tela = 'history'; render(); }
+        else if (action === 'open') { state.tela = 'open'; render(); }
+        else if (action === 'record') { state.tela = 'record'; render(); }
+        else if (action === 'equipment') { state.tela = 'equipment'; render(); }
+        else if (action === 'open-repair') startRepair();
+        else if (action === 'begin-day') beginDay();
+        else if (action === 'toggle-timer') toggleTimer();
+        else if (action === 'start-finalize') beginFinalize();
+        else if (action === 'leave-open') leaveOpen();
+        else if (action === 'finalize-review') finalizeReview();
+        else if (action === 'back') goBack();
+        else if (action === 'leader-options') openAuth('lider');
+        else if (action === 'conditions') { state.tela = 'conditions'; render(); }
+        else if (action === 'end-day') { state.tela = 'end'; render(); }
+        else if (action === 'condition-operators') { state.tela = 'condition-operators'; render(); }
+        else if (action === 'condition-equipment') { state.tela = 'condition-equipment'; render(); }
+        else if (action === 'close-day') { state.diaIniciado = false; state.tela = 'menu'; render(); }
+        else if (action === 'confirm-code') confirmCode();
+        else if (action === 'cancel-modal') { state.modal = false; state.acaoPendente = null; state.modalErro = ''; render(); }
+      }));
+      document.querySelectorAll('[data-key]').forEach(button => button.addEventListener('click', () => handleKey(button.dataset.key, button.dataset.keyType)));
+      document.querySelectorAll('[data-choice]').forEach(button => button.addEventListener('click', () => {
+        const action = button.dataset.choice;
+        const value = button.dataset.value;
+        if (action === 'symptom') chooseSymptom(value);
+        else if (action === 'part') choosePart(value);
+        else if (action === 'detail') chooseDetail(value);
+        else if (action === 'defect') chooseDefect(value);
+        else if (action === 'equipment-choice') chooseEquipment(value);
+        else if (action === 'condition-operator') addCondition('operator', value);
+        else if (action === 'condition-equipment-add') addCondition('equipment', value);
+      }));
+      document.querySelectorAll('[data-open-repair]').forEach(button => button.addEventListener('click', () => finalizeExisting(button.dataset.openRepair)));
+      document.querySelectorAll('[data-confirm-condition]').forEach(button => button.addEventListener('click', () => { const c = state.condicoes.find(item => item.id === button.dataset.confirmCondition); if (c) c.aguardando = false; render(); }));
+      document.querySelectorAll('[data-end-condition]').forEach(button => button.addEventListener('click', () => { const c = state.condicoes.find(item => item.id === button.dataset.endCondition); if (c) c.ativa = false; render(); }));
+      const modelSelect = document.getElementById('model-select');
+      if (modelSelect) modelSelect.addEventListener('change', () => { state.sessao.modelo = modelSelect.value; state.sessao.ordem = DADOS.modelos.find(item => item.nome === modelSelect.value)?.ordem || ''; render(); });
+    }
+
+    previewSetup();
+    render();
+  </script>
+</body>
+</html>
