@@ -1,6 +1,6 @@
 # ReproCheck
 
-Registro, acompanhamento e análise de reparos (reprocessos) na linha de montagem de fábricas de manufatura: poucos passos para o operador e um resumo pronto toda manhã para quem decide.
+Registro, acompanhamento e análise de reparos (reprocessos) na linha de montagem de fábricas de manufatura: poucos passos para o operador e um resumo pronto toda manhã.
 
 **Projeto acadêmico de Engenharia de Software**
 
